@@ -1,4 +1,4 @@
-# Noise-Robust Multi-View Graph Neural Network (MvGNN)
+# Noise-Robust Multi-View Graph Neural Network (MvGNN) for fault diagnosis of rotating machinery
 
 Official PyTorch implementation of the paper:
 
