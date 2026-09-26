@@ -36,7 +36,6 @@ As described in the paper, the overall framework comprises four components:
 ├── scripts/
 │   ├── prepare_xjtu.py        # XJTU HDF5-to-NPZ preparation
 │   ├── prepare_seu.py         # SEU HDF5-to-NPZ preparation
-│   └── make_demo_data.py      # Synthetic pipeline-check data
 ├── train.py                   # Training, early stopping, and checkpointing
 ├── evaluate.py                # Checkpoint evaluation
 ├── overall_framework_new.png
@@ -58,21 +57,28 @@ pip install -r requirements.txt
 
 `torch-cluster` must match the installed PyTorch/CUDA build. If pip cannot find a compatible wheel, install it from the [PyTorch Geometric wheel index](https://data.pyg.org/whl/) for your PyTorch version.
 
-## Quick pipeline check
+## XJTU quick start
 
-The generated data are synthetic and only verify installation and code flow; they do not reproduce paper results. Because the demo NPZ does not contain precomputed adjacency matrices, this check also exercises dynamic graph construction with `torch_cluster.knn_graph`.
+Download the processed XJTU HDF5 file from [Google Drive](https://drive.google.com/file/d/1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84/view?usp=drive_link), or use:
 
 ```bash
-python scripts/make_demo_data.py
-python train.py \
-  --config configs/xj_paper.json \
-  --data data/example/demo_xj.npz \
-  --output checkpoints/demo.pt \
-  --epochs 2
-python evaluate.py \
-  --checkpoint checkpoints/demo.pt \
-  --data data/example/demo_xj.npz
+curl -L --fail \
+  'https://drive.usercontent.google.com/download?id=1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84&export=download&confirm=t' \
+  -o data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5
 ```
+
+Verify the download and convert it to the aligned NPZ consumed by the training code:
+
+```bash
+echo "3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a  data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5" | sha256sum --check -
+
+python scripts/prepare_xjtu.py \
+  --input data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
+  --output data/xjtu_snr100.npz \
+  --snr 100
+```
+
+Then train and evaluate as described below. The downloaded HDF5 file is the processed version used by this release; it contains real XJTU measurements rather than synthetic demo signals.
 
 ## Datasets and preprocessing
 
@@ -103,7 +109,7 @@ python scripts/prepare_seu.py \
 
 For a noisy condition, change `--snr` to the desired dB value, for example `--snr -10`. Noise is added to each segmented TD sample before the loader performs per-window normalization. The preparation scripts keep TD windows, labels, source keys, and metadata in one aligned NPZ file; FD features and graph edges are generated at load time.
 
-The datasets are not redistributed in this repository. Obtain them from their official sources and comply with their respective licenses.
+This project provides a processed version of the public XJTU dataset: non-overlapping 1024-point windows with condition labels, rather than the original continuous acquisition files. The SEU dataset is not redistributed and must be obtained from its official source. When using either dataset, comply with its terms and cite the associated publication: Li et al., *Mechanical Systems and Signal Processing* 168 (2022), [doi:10.1016/j.ymssp.2021.108653](https://doi.org/10.1016/j.ymssp.2021.108653), for XJTU; and Shao et al., *IEEE Transactions on Industrial Informatics* 15(4) (2019), [doi:10.1109/TII.2018.2864759](https://doi.org/10.1109/TII.2018.2864759), for SEU. Complete BibTeX entries and processing details are provided in [data/README.md](data/README.md#dataset-citations).
 
 ## Training and evaluation
 
