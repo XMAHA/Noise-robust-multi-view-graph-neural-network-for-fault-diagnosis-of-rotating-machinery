@@ -36,6 +36,9 @@ As described in the paper, the overall framework comprises four components:
 ├── scripts/
 │   ├── prepare_xjtu.py        # XJTU HDF5-to-NPZ preparation
 │   ├── prepare_seu.py         # SEU HDF5-to-NPZ preparation
+│   ├── validate_prepared_data.py # Data integrity and source-parity checks
+│   └── run_trials.py          # Repeated trials and accuracy summary
+├── REPRODUCIBILITY.md         # Step-by-step GPU reproduction guide
 ├── train.py                   # Training, early stopping, and checkpointing
 ├── evaluate.py                # Checkpoint evaluation
 ├── overall_framework_new.png
@@ -75,7 +78,13 @@ echo "3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a  data/XJ_
 python scripts/prepare_xjtu.py \
   --input data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
   --output data/xjtu_snr100.npz \
-  --snr 100
+  --snr 100 \
+  --start-window 100
+
+python scripts/validate_prepared_data.py \
+  --data data/xjtu_snr100.npz \
+  --source data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
+  --start-window 100
 ```
 
 Then train and evaluate as described below. The downloaded HDF5 file is the processed version used by this release; it contains real XJTU measurements rather than synthetic demo signals.
@@ -99,7 +108,8 @@ Prepare clean XJTU and SEU files (`--snr 100` follows the original code conventi
 python scripts/prepare_xjtu.py \
   --input /path/to/XJTU_TD_ordered.h5 \
   --output data/xjtu_snr100.npz \
-  --snr 100
+  --snr 100 \
+  --start-window 100
 
 python scripts/prepare_seu.py \
   --input /path/to/SEU_TD_ordered.h5 \
@@ -119,7 +129,9 @@ Train on XJTU:
 python train.py \
   --config configs/xj_paper.json \
   --data /path/to/xj.npz \
-  --output checkpoints/xj_mvgnn.pt
+  --output checkpoints/xj_mvgnn.pt \
+  --device cuda \
+  --seed 0
 ```
 
 Train on SEU:
@@ -136,10 +148,14 @@ Evaluate a labeled file:
 ```bash
 python evaluate.py \
   --checkpoint checkpoints/xj_mvgnn.pt \
-  --data /path/to/xj_test.npz
+  --data /path/to/xj.npz \
+  --device cuda \
+  --split test
 ```
 
 The release selects a checkpoint using validation accuracy and evaluates the test split after selection. Checkpoints store the model `state_dict`, configuration, selected epoch, validation accuracy, and exact train/validation/test indices.
+
+For complete commands covering data validation, a GPU smoke test, ten independent trials, and all noise levels, see [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
 ## Model configuration from the paper
 
@@ -171,7 +187,29 @@ The JSON files also contain training defaults recovered from the accompanying ex
 - Under strong noise, MvGNN achieves 93.39% on XJTU at −10 dB and 95.88% on SEU at −6 dB.
 - The separability study reports multi-view accuracies of 97.78% on XJTU at −8 dB and 98.89% on SEU at −4 dB.
 
-This training script performs one seeded trial per invocation. To reproduce the paper statistics, prepare each target SNR with the corresponding `--snr` option, run ten independent trials with distinct configuration seeds, and report their mean and standard deviation. Every checkpoint records the exact train/validation/test indices used by that run; the historical split indices used for the published experiments are not available in the original research code.
+By default, data preparation and training are seeded so that another user can reproduce the same noise realization, data split, initialization, and result. To run ten deterministic trials, use `scripts/run_trials.py` with `--seeds 0 1 2 3 4 5 6 7 8 9`.
+
+The historical experiment code did not fix random seeds. The release therefore also provides an explicit `--unseeded` mode. In this mode, `prepare_seu.py` draws a fresh noise realization, while `run_trials.py` leaves the data split, model initialization, and batch order unseeded. For example, the following commands prepare and evaluate SEU at −6, −8, and −10 dB:
+
+```bash
+for snr in -6 -8 -10; do
+  python scripts/prepare_seu.py \
+    --input data/117_small_20-50_multi_1024_TD_ordered.h5 \
+    --output "data/seu_snr${snr}_unseeded.npz" \
+    --snr "${snr}" \
+    --unseeded
+
+  CUDA_VISIBLE_DEVICES=0 python scripts/run_trials.py \
+    --config configs/seu_paper.json \
+    --data "data/seu_snr${snr}_unseeded.npz" \
+    --output-dir "results/seu_npz_snr${snr}_unseeded" \
+    --device cuda \
+    --unseeded \
+    --trials 10
+done
+```
+
+An unseeded run is intentionally not bitwise reproducible: regenerating an NPZ or rerunning training produces a new random experiment. Preserve the generated NPZ and result directory when comparing results. Every checkpoint still records the exact train/validation/test indices used by that run; the historical split indices used for the published experiments are not available in the original research code.
 
 ## Reproducibility safeguards
 
