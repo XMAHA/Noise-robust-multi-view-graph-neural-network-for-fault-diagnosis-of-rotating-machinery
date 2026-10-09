@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the associated paper."
+title: "Noise-Robust Multi-View Graph Neural Network for Fault Diagnosis of Rotating Machinery"
+type: software
+authors:
+  - family-names: Li
+    given-names: Chenyang
+  - family-names: Mo
+    given-names: Lingfei
+  - family-names: Kwoh
+    given-names: Chee Keong
+  - family-names: Li
+    given-names: Xiaoli
+  - family-names: Chen
+    given-names: Zhenghua
+  - family-names: Wu
+    given-names: Min
+  - family-names: Yan
+    given-names: Ruqiang
+repository-code: "https://github.com/XMAHA/Noise-robust-multi-view-graph-neural-network-for-fault-diagnosis-of-rotating-machinery"
+license: MIT
+version: 1.0.0
+preferred-citation:
+  type: article
+  title: "Noise-robust multi-view graph neural network for fault diagnosis of rotating machinery"
+  authors:
+    - family-names: Li
+      given-names: Chenyang
+    - family-names: Mo
+      given-names: Lingfei
+    - family-names: Kwoh
+      given-names: Chee Keong
+    - family-names: Li
+      given-names: Xiaoli
+    - family-names: Chen
+      given-names: Zhenghua
+    - family-names: Wu
+      given-names: Min
+    - family-names: Yan
+      given-names: Ruqiang
+  journal: "Mechanical Systems and Signal Processing"
+  volume: 224
+  year: 2025
+  start: "112025"
+  doi: "10.1016/j.ymssp.2024.112025"

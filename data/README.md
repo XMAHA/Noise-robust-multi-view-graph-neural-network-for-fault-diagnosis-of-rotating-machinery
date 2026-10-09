@@ -1,92 +1,72 @@
 # Data preparation
 
-The paper evaluates MvGNN on the public **XJTU Spurgear dataset** and the **SEU mechanical dataset**. This project distributes a **processed version of the public XJTU data**, not the original continuous acquisition files. The processed HDF5 file contains non-overlapping 1024-point multi-sensor windows and condition labels used by the paper pipeline. The SEU dataset is not redistributed; obtain it from its official source and comply with its license.
+This release supports clean-signal experiments on the public XJTU Spurgear and SEU mechanical datasets. The preparation scripts do not inject synthetic noise.
 
-## End-to-end HDF5 preparation
+## XJTU
 
-The distributed XJTU file is `XJ_Suprgear_15_20_multi_1024_TD_ordered.h5`. It contains 10 operating conditions (five health states at two rotation speeds), 12 sensor channels, 1024 signal points per window, and a repeated label column as the 1025th value. `prepare_xjtu.py` removes the stored label column from the signal tensor, maps the 10 conditions to five classes, selects up to 1000 windows per condition, optionally adds Gaussian noise, and writes the aligned NPZ consumed by `train.py` and `evaluate.py`.
+The processed file `XJ_Suprgear_15_20_multi_1024_TD_ordered.h5` contains ten conditions: five health states at two speeds. Each stored sample has 12 sensor channels, 1024 signal values, and a repeated label value in the final position. The preparation script discards that stored label column, maps conditions from their HDF5 keys, and selects windows 100–1099.
 
-### Download the processed XJTU file
-
-- Google Drive: [XJ_Suprgear_15_20_multi_1024_TD_ordered.h5](https://drive.google.com/file/d/1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84/view?usp=drive_link)
-- File size: `1,190,744,544` bytes (approximately 1.11 GiB)
+- Download: [Google Drive](https://drive.google.com/file/d/1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84/view?usp=drive_link)
+- Size: `1,190,744,544` bytes
 - SHA-256: `3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a`
-
-Download from a terminal:
-
-```bash
-curl -L --fail \
-  'https://drive.usercontent.google.com/download?id=1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84&export=download&confirm=t' \
-  -o data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5
-```
-
-Verify the downloaded file:
-
-```bash
-echo "3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a  data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5" | sha256sum --check -
-```
-
-The HDF5 keys must preserve the original condition names so that their fault state and rotation speed can be identified. Each condition may contain either continuous arrays (`[sensors, time]` or `[time, sensors]`) or already segmented arrays (`[samples, sensors, time]`). Continuous signals are split into non-overlapping 1024-point windows. The scripts apply the paper label mapping, merge rotation speeds, optionally add Gaussian noise before normalization, and write one aligned NPZ file.
-
-XJTU (10 conditions to 5 classes):
 
 ```bash
 python scripts/prepare_xjtu.py \
-  --input /path/to/XJTU_TD_ordered.h5 \
-  --output data/xjtu_snr100.npz \
-  --snr 100
+  --input /path/to/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
+  --output data/xjtu_clean.npz \
+  --start-window 100 \
+  --max-windows-per-condition 1000
 ```
 
-SEU (40 original conditions; four duplicate bearing-health conditions are excluded to obtain 9 classes):
+Expected output: `signals=(10000, 12, 1024)`, with 2000 samples in each of five classes.
+
+## SEU
+
+The SEU task merges four speeds for each state and excludes the four `bearing_health` conditions because gearbox health is used as the single healthy class. The retained data contain 36 conditions: nine classes at four speeds.
 
 ```bash
 python scripts/prepare_seu.py \
-  --input /path/to/SEU_TD_ordered.h5 \
-  --output data/seu_snr100.npz \
-  --snr 100
+  --input /path/to/117_small_20-50_multi_1024_TD_ordered.h5 \
+  --output data/seu_clean.npz \
+  --start-window 0 \
+  --max-windows-per-condition 1000
 ```
 
-Use `--snr -10`, `--snr -8`, ..., `--snr 10` for the noise experiments. The value `100` follows the original convention and disables added noise. `--seed` controls noise generation. `--max-windows-per-condition` limits each operating condition (one fault-state and rotation-speed combination) to 1000 windows by default, matching the number of samples used per condition in the paper.
+Expected output: `signals=(36000, 8, 1024)`, with 4000 samples in each of nine classes.
 
-The preparation output intentionally contains TD windows rather than separately generated TD, FD, and adjacency files. This keeps samples and labels aligned. Per-window normalization, FFT features, and kNN graph edges are generated consistently by the dataset loader.
+## Validate the prepared files
 
-## Paper preprocessing
+```bash
+python scripts/validate_prepared_data.py \
+  --data data/xjtu_clean.npz \
+  --source /path/to/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
+  --num-nodes 12 --num-classes 5 --conditions-per-class 2 \
+  --start-window 100
 
-- Segment every channel into non-overlapping windows of 1024 samples.
-- For robustness experiments, add Gaussian noise to each TD window at the requested SNR.
-- Normalize each sensor window independently.
-- Treat each sensor channel as one graph node.
-- Construct a sample-specific graph from the normalized TD node features using Euclidean-distance kNN with `k = 1`.
-- Convert directed neighbor selections into an undirected, symmetric graph.
-- Generate the FD view as `abs(FFT(x)) / 1024`, remove the DC component (bin 0), and retain bins 1–512, including the Nyquist bin. The positive- and negative-frequency magnitudes are not added and the retained spectrum is not max-normalized.
-- Assign signals from different rotation speeds but the same health state to the same class.
+python scripts/validate_prepared_data.py \
+  --data data/seu_clean.npz \
+  --source /path/to/117_small_20-50_multi_1024_TD_ordered.h5 \
+  --num-nodes 8 --num-classes 9 --conditions-per-class 4 \
+  --start-window 0
+```
 
-## NPZ schema
+Both commands must end with `validation=PASS` and report `source_max_abs_error=0.000e+00`.
 
-Prepare one compressed NumPy file containing:
+## NPZ schema and online processing
 
-- `signals`: `float32 [num_samples, num_sensors, 1024]` TD windows;
-- `labels`: `int64 [num_samples]`, contiguous labels from `0` to `num_classes - 1`;
-- `adjacency` (optional precomputed input): `[num_sensors, num_sensors]` or `[num_samples, num_sensors, num_sensors]`.
+Each file contains:
 
-Files produced by the preparation scripts also include `source_key`, `class_names`, `dataset`, `snr_db`, `window_length`, and `seed` metadata. Stored `signals` contain segmented clean or noise-injected TD windows; normalization is deliberately deferred to loading.
+- `signals`: `float32 [samples, sensors, 1024]` clean TD windows;
+- `labels`: `int64 [samples]`, contiguous from zero;
+- `source_key`: source HDF5 condition for every sample;
+- `class_names`, `dataset`, `window_length`, `start_window`, `max_windows_per_condition`;
+- `preprocessing`: the string `clean`.
 
-Graph connectivity is always required by MvGNN. If a precomputed `adjacency` array is omitted from the NPZ file, the loader constructs a sample-specific `edge_index` from each normalized TD window with `torch_cluster.knn_graph` and `graph_k` from the selected configuration (`k = 1`). Thus, both training and evaluation always receive graph edges. If a precomputed adjacency matrix is supplied, the loader uses it instead, symmetrizes it, and removes self-loops. The loader also normalizes each window and computes the FD view automatically.
-
-## Dataset summary from the paper
-
-| Dataset | Sampling rate | Speeds | Nodes | Classes | Samples per class and speed |
-|---|---:|---|---:|---:|---:|
-| XJTU Spurgear | 10 kHz | 900, 1200 r/min | 12 | 5 | 1000 |
-| SEU mechanical | 5120 Hz | 1200, 1800, 2400, 3000 r/min | 8 | 9 | 1000 |
-
-The XJTU classes are health and tooth-root cracks of 0.2, 0.6, 1.0, and 1.4 mm. The SEU classes are health; four bearing states (ball wear, inner-race wear, outer-race wear, combined inner/outer-race wear); and four gear states (tooth crack, tooth missing, tooth-root crack, surface wear).
+The loader independently z-score normalizes every sensor window. It computes the FD view as `abs(FFT(x)) / 1024`, removes DC, and retains bins 1–512. Graph connectivity is required but need not be stored: when `adjacency` is absent, `torch_cluster.knn_graph` constructs a sample-specific `k = 1` graph from normalized TD features and symmetrizes its edges.
 
 ## Dataset citations
 
-When using these datasets, please cite their associated publications.
-
-### XJTU Spurgear dataset
+### XJTU Spurgear
 
 ```bibtex
 @article{LI2022108653,
@@ -96,13 +76,11 @@ When using these datasets, please cite their associated publications.
   volume  = {168},
   pages   = {108653},
   year    = {2022},
-  issn    = {0888-3270},
-  doi     = {10.1016/j.ymssp.2021.108653},
-  url     = {https://www.sciencedirect.com/science/article/pii/S0888327021009791}
+  doi     = {10.1016/j.ymssp.2021.108653}
 }
 ```
 
-### SEU mechanical dataset
+### SEU mechanical
 
 ```bibtex
 @article{8432110,

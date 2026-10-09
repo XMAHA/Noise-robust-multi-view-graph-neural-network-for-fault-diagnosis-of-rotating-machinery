@@ -2,242 +2,162 @@
 
 > **Noise-robust multi-view graph neural network for fault diagnosis of rotating machinery**  
 > Chenyang Li, Lingfei Mo, Chee Keong Kwoh, Xiaoli Li, Zhenghua Chen, Min Wu, and Ruqiang Yan  
-> *Mechanical Systems and Signal Processing*, Volume 224, Article 112025, 2025
+> *Mechanical Systems and Signal Processing*, 224, 112025, 2025
 
 [![Paper](https://img.shields.io/badge/Paper-MSSP-blue)](https://www.sciencedirect.com/science/article/pii/S0888327024009233)
 [![DOI](https://img.shields.io/badge/DOI-10.1016%2Fj.ymssp.2024.112025-blue)](https://doi.org/10.1016/j.ymssp.2024.112025)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-MvGNN models normalized multi-sensor signals as a multi-view graph with a shared topology and complementary time-domain (TD) and frequency-domain (FD) node features. Independent ChebNet branches aggregate information within the two views, and a node-level view-attention block learns their unified representation for graph-level fault classification.
+MvGNN represents normalized multi-sensor signals as a multi-view graph with a shared topology and complementary time-domain (TD) and frequency-domain (FD) node features. Independent ChebNet branches aggregate the two views, and node-level view attention produces a unified representation for fault classification.
 
-## Overall Framework
+## Release scope
+
+This repository releases the MvGNN architecture and an end-to-end **clean-signal** pipeline for the XJTU Spurgear and SEU mechanical datasets. It supports HDF5-to-NPZ preparation, integrity validation, training, validation-based checkpoint selection, and testing.
+
+The released preparation scripts do not add synthetic noise. Consequently, this repository does not claim to reproduce the noisy-condition tables or robustness curves reported in the paper. Its reproduction scope is the model implementation and experiments using signals without additional synthetic noise.
+
+## Overall framework
 
 <p align="center">
   <img src="overall_framework_new.png" alt="Overall framework of MvGNN" width="100%">
 </p>
 
-As described in the paper, the overall framework comprises four components:
+The framework comprises four components:
 
-1. **Multi-view graph generation.** Each sensor channel is represented as a node. For every normalized 1024-point window, Euclidean-distance kNN (`k = 1`) constructs a symmetric, undirected graph shared by both views. Within this component, `N` independently parameterized three-layer WDCNNs transform the signals into `N × 256` TD-view node features, while FFT removes the DC component and retains magnitude coefficients from bins 1 through 512 (including the Nyquist bin) to produce `N × 512` FD-view node features.
-2. **Multi-view graph aggregation.** Two independent one-layer ChebNet branches (`K = 2`) aggregate multi-sensor information within the TD-view and FD-view graphs, respectively, mapping both views to `N × 64` node representations.
-3. **Multi-view graph fusion.** The view-attention block applies intra-view and inter-view softmax operations to learn node-level attention coefficients and obtains a unified multi-view representation through the weighted sum of the TD and FD views.
-4. **Graph classification.** Graph global max pooling converts the fused node representations into a graph-level representation, which is passed to a fully connected layer with softmax to infer the health state.
+1. **Multi-view graph generation.** Each sensor channel is a node. Euclidean-distance kNN (`k = 1`) constructs a symmetric graph from each normalized 1024-point window. `N` independently parameterized three-layer WDCNN encoders produce `N × 256` TD features. FFT removes the DC component and retains magnitude bins 1–512, including the Nyquist bin, as the FD features.
+2. **Multi-view graph aggregation.** Independent one-layer ChebNet branches (`K = 2`) map both views to `N × 64` node representations.
+3. **Multi-view graph fusion.** Intra-view and inter-view softmax operations learn node-level view weights, followed by a weighted sum of the TD and FD representations.
+4. **Graph classification.** Global max pooling and a fully connected classifier infer the health state.
 
 ## Repository structure
 
 ```text
-├── configs/                   # XJTU and SEU experiment configurations
-├── data/README.md             # Data preparation and NPZ schema
+├── configs/                       # XJTU and SEU clean-data configurations
+├── data/README.md                 # Data preparation, schema, and citations
 ├── mvgnn/
-│   ├── data.py                # Normalization, FFT, and kNN graph construction
-│   ├── model.py               # MvGNN architecture
-│   ├── preprocessing.py       # HDF5 parsing, windowing, label mapping, and noise injection
-│   └── utils.py               # Configuration and reproducibility utilities
+│   ├── data.py                    # Normalization, FFT, and kNN graphs
+│   ├── model.py                   # MvGNN architecture
+│   ├── preprocessing.py           # Clean HDF5 window selection and label mapping
+│   └── utils.py                   # Configuration and random-seed utilities
 ├── scripts/
-│   ├── prepare_xjtu.py        # XJTU HDF5-to-NPZ preparation
-│   ├── prepare_seu.py         # SEU HDF5-to-NPZ preparation
-│   ├── validate_prepared_data.py # Data integrity and source-parity checks
-│   └── run_trials.py          # Repeated trials and accuracy summary
-├── REPRODUCIBILITY.md         # Step-by-step GPU reproduction guide
-├── train.py                   # Training, early stopping, and checkpointing
-├── evaluate.py                # Checkpoint evaluation
-├── overall_framework_new.png
+│   ├── prepare_xjtu.py            # Clean XJTU HDF5-to-NPZ conversion
+│   ├── prepare_seu.py             # Clean SEU HDF5-to-NPZ conversion
+│   ├── validate_prepared_data.py  # Shape, balance, and source-parity checks
+│   └── run_trials.py              # Repeated trials and result summary
+├── train.py
+├── evaluate.py
+├── REPRODUCIBILITY.md
 └── requirements.txt
 ```
 
 ## Installation
 
-Python 3.9 or later is recommended. Install PyTorch for the appropriate CUDA or CPU platform first, then run:
+Python 3.9 or later is recommended. Install the PyTorch build matching the local CUDA version, then install the remaining dependencies:
 
 ```bash
 git clone https://github.com/XMAHA/Noise-robust-multi-view-graph-neural-network-for-fault-diagnosis-of-rotating-machinery.git
 cd Noise-robust-multi-view-graph-neural-network-for-fault-diagnosis-of-rotating-machinery
-
 python -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-`torch-cluster` must match the installed PyTorch/CUDA build. If pip cannot find a compatible wheel, install it from the [PyTorch Geometric wheel index](https://data.pyg.org/whl/) for your PyTorch version.
+`torch-cluster` must match the installed PyTorch/CUDA build. If necessary, install its wheel from the [PyTorch Geometric wheel index](https://data.pyg.org/whl/).
 
-## XJTU quick start
+## Datasets
 
-Download the processed XJTU HDF5 file from [Google Drive](https://drive.google.com/file/d/1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84/view?usp=drive_link), or use:
-
-```bash
-curl -L --fail \
-  'https://drive.usercontent.google.com/download?id=1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84&export=download&confirm=t' \
-  -o data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5
-```
-
-Verify the download and convert it to the aligned NPZ consumed by the training code:
-
-```bash
-echo "3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a  data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5" | sha256sum --check -
-
-python scripts/prepare_xjtu.py \
-  --input data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
-  --output data/xjtu_snr100.npz \
-  --snr 100 \
-  --start-window 100
-
-python scripts/validate_prepared_data.py \
-  --data data/xjtu_snr100.npz \
-  --source data/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
-  --start-window 100
-```
-
-Then train and evaluate as described below. The downloaded HDF5 file is the processed version used by this release; it contains real XJTU measurements rather than synthetic demo signals.
-
-## Datasets and preprocessing
-
-The paper uses two public rotating-machinery datasets:
-
-| Dataset | Sampling rate | Rotation speeds | Sensors / nodes | Classes | Samples per class and speed |
+| Dataset | Sampling rate | Speeds (r/min) | Nodes | Classes | Selected windows per condition |
 |---|---:|---|---:|---:|---:|
-| XJTU Spurgear | 10 kHz | 900, 1200 r/min | 12 | 5 | 1000 |
-| SEU mechanical | 5120 Hz | 1200, 1800, 2400, 3000 r/min | 8 | 9 | 1000 |
+| XJTU Spurgear | 10 kHz | 900, 1200 | 12 | 5 | 1000 |
+| SEU mechanical | 5120 Hz | 1200, 1800, 2400, 3000 | 8 | 9 | 1000 |
 
-The XJTU task contains health and tooth-root cracks of 0.2, 0.6, 1.0, and 1.4 mm. The SEU task combines health, four bearing-fault states, and four gear-fault states. Signals from different speeds but the same health state share a label.
+Signals from different speeds but the same health state share a class. Each NPZ stores clean 1024-point TD windows and labels. During loading, every sensor window is z-score normalized; the FD view is computed from that same normalized window; and `torch_cluster.knn_graph` constructs the sample-specific graph.
 
-Following Section 4.1.3 of the paper, signals are divided into non-overlapping windows of 1024 samples and normalized per sensor window. `scripts/prepare_xjtu.py` and `scripts/prepare_seu.py` convert the original condition-keyed HDF5 files, reproduce the paper label merging, and optionally inject Gaussian noise at a specified SNR. At load time, `torch_cluster.knn_graph` constructs the paper-consistent `k = 1` undirected graph and FFT generates the 512-dimensional FD view. See [data/README.md](data/README.md) for commands, schema, and class mappings.
+The processed XJTU HDF5 file is available from [Google Drive](https://drive.google.com/file/d/1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84/view?usp=drive_link). Its SHA-256 is `3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a`. SEU data must be obtained in accordance with the dataset's terms. See [data/README.md](data/README.md) for mappings, validation commands, and required citations.
 
-Prepare clean XJTU and SEU files (`--snr 100` follows the original code convention and disables added noise):
+## Prepare clean data
 
 ```bash
 python scripts/prepare_xjtu.py \
-  --input /path/to/XJTU_TD_ordered.h5 \
-  --output data/xjtu_snr100.npz \
-  --snr 100 \
-  --start-window 100
+  --input /path/to/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
+  --output data/xjtu_clean.npz \
+  --start-window 100 \
+  --max-windows-per-condition 1000
 
 python scripts/prepare_seu.py \
-  --input /path/to/SEU_TD_ordered.h5 \
-  --output data/seu_snr100.npz \
-  --snr 100
+  --input /path/to/117_small_20-50_multi_1024_TD_ordered.h5 \
+  --output data/seu_clean.npz \
+  --start-window 0 \
+  --max-windows-per-condition 1000
 ```
 
-For a noisy condition, change `--snr` to the desired dB value, for example `--snr -10`. Noise is added to each segmented TD sample before the loader performs per-window normalization. The preparation scripts keep TD windows, labels, source keys, and metadata in one aligned NPZ file; FD features and graph edges are generated at load time.
+XJTU retains windows `100:1100` from each of ten conditions. SEU retains `0:1000` and excludes the four duplicate bearing-health conditions.
 
-This project provides a processed version of the public XJTU dataset: non-overlapping 1024-point windows with condition labels, rather than the original continuous acquisition files. The SEU dataset is not redistributed and must be obtained from its official source. When using either dataset, comply with its terms and cite the associated publication: Li et al., *Mechanical Systems and Signal Processing* 168 (2022), [doi:10.1016/j.ymssp.2021.108653](https://doi.org/10.1016/j.ymssp.2021.108653), for XJTU; and Shao et al., *IEEE Transactions on Industrial Informatics* 15(4) (2019), [doi:10.1109/TII.2018.2864759](https://doi.org/10.1109/TII.2018.2864759), for SEU. Complete BibTeX entries and processing details are provided in [data/README.md](data/README.md#dataset-citations).
-
-## Training and evaluation
-
-Train on XJTU:
+## Train and test
 
 ```bash
-python train.py \
+CUDA_VISIBLE_DEVICES=0 python train.py \
   --config configs/xj_paper.json \
-  --data /path/to/xj.npz \
-  --output checkpoints/xj_mvgnn.pt \
-  --device cuda \
-  --seed 0
-```
+  --data data/xjtu_clean.npz \
+  --output checkpoints/xjtu_clean_seed0.pt \
+  --device cuda --seed 0
 
-Train on SEU:
-
-```bash
-python train.py \
+CUDA_VISIBLE_DEVICES=0 python train.py \
   --config configs/seu_paper.json \
-  --data /path/to/seu.npz \
-  --output checkpoints/seu_mvgnn.pt
+  --data data/seu_clean.npz \
+  --output checkpoints/seu_clean_seed0.pt \
+  --device cuda --seed 0
+
+CUDA_VISIBLE_DEVICES=0 python evaluate.py \
+  --checkpoint checkpoints/xjtu_clean_seed0.pt \
+  --data data/xjtu_clean.npz --device cuda --split test
+
+CUDA_VISIBLE_DEVICES=0 python evaluate.py \
+  --checkpoint checkpoints/seu_clean_seed0.pt \
+  --data data/seu_clean.npz --device cuda --split test
 ```
 
-Evaluate a labeled file:
+For source validation, GPU smoke tests, and ten-trial commands, see [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
-```bash
-python evaluate.py \
-  --checkpoint checkpoints/xj_mvgnn.pt \
-  --data /path/to/xj.npz \
-  --device cuda \
-  --split test
-```
-
-The release selects a checkpoint using validation accuracy and evaluates the test split after selection. Checkpoints store the model `state_dict`, configuration, selected epoch, validation accuracy, and exact train/validation/test indices.
-
-For complete commands covering data validation, a GPU smoke test, ten independent trials, and all noise levels, see [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
-
-## Model configuration from the paper
-
-The following values are reported in Table 3 and Section 4.2.1:
+## Model configuration
 
 | Setting | XJTU | SEU |
 |---|---:|---:|
-| Input node dimension | 1024 | 1024 |
+| Input length | 1024 | 1024 |
 | Graph neighbors `k` | 1 | 1 |
-| Sensors / nodes `N` | 12 | 8 |
+| Sensors / nodes | 12 | 8 |
 | Classes | 5 | 9 |
 | WDCNN layers | 3 | 3 |
-| WDCNN wide kernel | 88 | 104 |
+| First-layer kernel | 88 | 104 |
 | TD-view dimension | 256 | 256 |
-| FFT magnitude bins (DC removed) | 1–512 | 1–512 |
-| ChebNet layers | 1 | 1 |
-| Chebyshev order `K` | 2 | 2 |
-| Graph hidden dimension | 64 | 64 |
-| Attention intermediate dimension | `2N` | `2N` |
+| FFT magnitude bins | 1–512 | 1–512 |
+| ChebNet layers / order | 1 / 2 | 1 / 2 |
+| Hidden dimension | 64 | 64 |
+| Batch size | 16 | 16 |
+| Learning rate | 0.005 | 0.005 |
 
-The JSON files also contain training defaults recovered from the accompanying experiment code: batch size 16, learning rate 0.005, at most 50 epochs, and early-stopping patience 5. These optimization values are implementation defaults and are not listed in the paper tables.
+The training pipeline uses an 80%/10%/10% stratified split. Early stopping uses validation accuracy. Checkpoints store the exact split indices, selected epoch, configuration, validation accuracy, and test accuracy.
 
-## Paper evaluation protocol and reported results
+## Reproducibility note
 
-- Random split: 80% training, 10% validation, and 10% testing.
-- Metrics: mean classification accuracy and standard deviation over ten trials.
-- Robustness study: Gaussian noise at SNR levels from −10 dB to 10 dB in 2 dB steps.
-- Hyperparameter studies use −8 dB for XJTU and −4 dB for SEU.
-- Under strong noise, MvGNN achieves 93.39% on XJTU at −10 dB and 95.88% on SEU at −6 dB.
-- The separability study reports multi-view accuracies of 97.78% on XJTU at −8 dB and 98.89% on SEU at −4 dB.
-
-By default, data preparation and training are seeded so that another user can reproduce the same noise realization, data split, initialization, and result. To run ten deterministic trials, use `scripts/run_trials.py` with `--seeds 0 1 2 3 4 5 6 7 8 9`.
-
-The historical experiment code did not fix random seeds. The release therefore also provides an explicit `--unseeded` mode. In this mode, `prepare_seu.py` draws a fresh noise realization, while `run_trials.py` leaves the data split, model initialization, and batch order unseeded. For example, the following commands prepare and evaluate SEU at −6, −8, and −10 dB:
-
-```bash
-for snr in -6 -8 -10; do
-  python scripts/prepare_seu.py \
-    --input data/117_small_20-50_multi_1024_TD_ordered.h5 \
-    --output "data/seu_snr${snr}_unseeded.npz" \
-    --snr "${snr}" \
-    --unseeded
-
-  CUDA_VISIBLE_DEVICES=0 python scripts/run_trials.py \
-    --config configs/seu_paper.json \
-    --data "data/seu_snr${snr}_unseeded.npz" \
-    --output-dir "results/seu_npz_snr${snr}_unseeded" \
-    --device cuda \
-    --unseeded \
-    --trials 10
-done
-```
-
-An unseeded run is intentionally not bitwise reproducible: regenerating an NPZ or rerunning training produces a new random experiment. Preserve the generated NPZ and result directory when comparing results. Every checkpoint still records the exact train/validation/test indices used by that run; the historical split indices used for the published experiments are not available in the original research code.
-
-## Reproducibility safeguards
-
-- Dataset loading validates the 1024-point window length, expected sensor count, class range, and optional adjacency dimensions against the selected configuration.
-- TD windows, labels, source keys, and metadata are stored together to avoid misalignment between separate HDF5 files.
-- Mini-batches support a smaller final batch instead of assuming a fixed batch size.
-- Early stopping uses validation accuracy; the test split is evaluated only after model selection.
-- Checkpoints use a portable model `state_dict` and retain the configuration and exact split indices.
+Seeds `0–9` are deterministic public reproduction runs; they do not reconstruct the unrecorded random splits of historical experiments. Compare distributions across repeated runs rather than expecting bitwise equality with a single historical run. Results from this release should be identified as clean-condition results.
 
 ## Citation
 
-If this work is useful in your research, please cite:
-
 ```bibtex
 @article{LI2025112025,
-  title    = {Noise-robust multi-view graph neural network for fault diagnosis of rotating machinery},
-  author   = {Chenyang Li and Lingfei Mo and Chee Keong Kwoh and Xiaoli Li and Zhenghua Chen and Min Wu and Ruqiang Yan},
-  journal  = {Mechanical Systems and Signal Processing},
-  volume   = {224},
-  pages    = {112025},
-  year     = {2025},
-  issn     = {0888-3270},
-  doi      = {10.1016/j.ymssp.2024.112025},
-  url      = {https://www.sciencedirect.com/science/article/pii/S0888327024009233},
-  keywords = {Multi-view graph, Graph neural network, Multi-sensor information fusion, Attention mechanism, Fault diagnosis}
+  title   = {Noise-robust multi-view graph neural network for fault diagnosis of rotating machinery},
+  author  = {Chenyang Li and Lingfei Mo and Chee Keong Kwoh and Xiaoli Li and Zhenghua Chen and Min Wu and Ruqiang Yan},
+  journal = {Mechanical Systems and Signal Processing},
+  volume  = {224},
+  pages   = {112025},
+  year    = {2025},
+  doi     = {10.1016/j.ymssp.2024.112025},
+  url     = {https://www.sciencedirect.com/science/article/pii/S0888327024009233}
 }
 ```
 
 ## License
 
-The source code is released under the [MIT License](LICENSE). The datasets and published article are governed by their own licenses and terms of use.
+The source code is released under the [MIT License](LICENSE). Datasets and the published article remain subject to their own licenses and terms.
