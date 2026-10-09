@@ -14,8 +14,6 @@ MvGNN represents normalized multi-sensor signals as a multi-view graph with a sh
 
 This repository releases the MvGNN architecture and an end-to-end **clean-signal** pipeline for the XJTU Spurgear and SEU mechanical datasets. It supports HDF5-to-NPZ preparation, integrity validation, training, validation-based checkpoint selection, and testing.
 
-The released preparation scripts do not add synthetic noise. Consequently, this repository does not claim to reproduce the noisy-condition tables or robustness curves reported in the paper. Its reproduction scope is the model implementation and experiments using signals without additional synthetic noise.
-
 ## Overall framework
 
 <p align="center">
