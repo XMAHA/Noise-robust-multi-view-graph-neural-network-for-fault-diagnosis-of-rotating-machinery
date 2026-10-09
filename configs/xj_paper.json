@@ -1,0 +1,27 @@
+{
+  "dataset": "XJTU Spurgear dataset",
+  "sampling_frequency_hz": 10000,
+  "rotation_speeds_rpm": [900, 1200],
+  "samples_per_class_per_speed": 1000,
+  "graph_k": 1,
+  "num_nodes": 12,
+  "num_classes": 5,
+  "time_length": 1024,
+  "frequency_length": 512,
+  "hidden_dim": 64,
+  "num_gnn_layers": 1,
+  "chebyshev_order": 2,
+  "wide_kernel": 88,
+  "batch_size": 16,
+  "epochs": 50,
+  "learning_rate": 0.005,
+  "lr_step_size": 3,
+  "lr_gamma": 0.5,
+  "patience": 5,
+  "train_ratio": 0.8,
+  "val_ratio": 0.1,
+  "test_ratio": 0.1,
+  "paper_trials": 10,
+  "seed": 42
+}
+

@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.venv/
+checkpoints/*
+!checkpoints/.gitkeep
+data/*
+!data/README.md
+!data/example/
+!data/example/.gitkeep
+runs/
+results/
+# Internal diagnostic scripts retained locally but excluded from the clean-data release.
+scripts/compare_noise_ablation.py
+scripts/run_xjtu_original_h5_trials.py
+.idea/
+.vscode/
+.DS_Store
+
