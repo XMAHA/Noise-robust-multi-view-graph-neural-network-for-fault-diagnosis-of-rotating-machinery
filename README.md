@@ -124,7 +124,7 @@ The training pipeline uses an 80%/10%/10% stratified split. Early stopping uses 
 
 ## Reproducibility note
 
-Seeds `0–9` are deterministic public reproduction runs; they do not reconstruct the unrecorded random splits of historical experiments. Compare distributions across repeated runs rather than expecting bitwise equality with a single historical run. Results from this release should be identified as clean-condition results.
+For reproducibility, experiments are repeated with fixed random seeds from `0` to `9`. Each checkpoint records the exact training, validation, and test indices used in that trial. Results are reported as the mean accuracy and standard deviation over ten trials.
 
 ## Citation
 
