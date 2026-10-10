@@ -25,7 +25,7 @@ The framework comprises four components:
 1. **Multi-view graph generation.** For a monitoring system with `N` sensors, each sensor corresponds to one graph node; therefore, `N` is both the number of sensors and the number of nodes. The normalized signal segment from each sensor serves as its initial node feature. Euclidean-distance kNN (`k = 1`) constructs an undirected graph with a symmetric adjacency matrix. Based on this shared topology, WDCNN transforms the initial node features into the TD-view feature space, while FFT transforms them into the FD-view feature space. `N` WDCNN branches are arranged in parallel to adapt to the signals from different sensor channels.
 2. **Multi-view graph aggregation.** Independent one-layer ChebNet branches (`K = 2`) map both views to `N × 64` node representations.
 3. **Multi-view graph fusion.** Intra-view and inter-view softmax operations learn node-level view weights, followed by a weighted sum of the TD and FD representations.
-4. **Graph classification.** Global max pooling and a fully connected classifier infer the health state.
+4. **Graph classification.** Global max pooling and a fully connected classifier infer the operating condition.
 
 ## Repository structure
 
