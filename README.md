@@ -44,7 +44,6 @@ The framework comprises four components:
 │   └── run_trials.py              # Repeated trials and result summary
 ├── train.py
 ├── evaluate.py
-├── REPRODUCIBILITY.md
 └── requirements.txt
 ```
 
@@ -100,8 +99,6 @@ CUDA_VISIBLE_DEVICES=0 python evaluate.py \
   --checkpoint checkpoints/seu_clean_seed0.pt \
   --data data/seu_clean.npz --device cuda --split test
 ```
-
-For source validation, GPU smoke tests, and ten-trial commands, see [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
 ## Model configuration
 
