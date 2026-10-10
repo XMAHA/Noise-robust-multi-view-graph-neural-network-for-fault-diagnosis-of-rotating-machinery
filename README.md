@@ -48,31 +48,16 @@ The framework comprises four components:
 └── requirements.txt
 ```
 
-## Installation
-
-Python 3.9 or later is recommended. Install the PyTorch build matching the local CUDA version, then install the remaining dependencies:
-
-```bash
-git clone https://github.com/XMAHA/Noise-robust-multi-view-graph-neural-network-for-fault-diagnosis-of-rotating-machinery.git
-cd Noise-robust-multi-view-graph-neural-network-for-fault-diagnosis-of-rotating-machinery
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-`torch-cluster` must match the installed PyTorch/CUDA build. If necessary, install its wheel from the [PyTorch Geometric wheel index](https://data.pyg.org/whl/).
-
 ## Datasets
 
-| Dataset | Sampling rate | Speeds (r/min) | Nodes | Classes | Selected windows per condition |
+| Dataset | Sampling rate | Speeds (r/min) | Nodes | Classes | Selected windows per class |
 |---|---:|---|---:|---:|---:|
 | XJTU Spurgear | 10 kHz | 900, 1200 | 12 | 5 | 1000 |
 | SEU mechanical | 5120 Hz | 1200, 1800, 2400, 3000 | 8 | 9 | 1000 |
 
 Signals from different speeds but the same health state share a class. Each NPZ stores clean 1024-point TD windows and labels. During loading, every sensor window is z-score normalized; the FD view is computed from that same normalized window; and `torch_cluster.knn_graph` constructs the sample-specific graph.
 
-The processed XJTU HDF5 file is available from [Google Drive](https://drive.google.com/file/d/1haWvkKF8jKgdtWrfrQ2njPeMvCBo9i84/view?usp=drive_link). Its SHA-256 is `3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a`. SEU data must be obtained in accordance with the dataset's terms. See [data/README.md](data/README.md) for mappings, validation commands, and required citations.
+The processed XJTU and SEU HDF5 files are available from [Google Drive](https://drive.google.com/drive/folders/1F7-hpbQvHqVTNGCc2dalmP2dagDZ6-Lu?usp=drive_link). The SHA-256 of the XJTU file is `3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a`. The datasets remain subject to their respective terms of use. See [data/README.md](data/README.md) for mappings, validation commands, and required citations.
 
 ## Prepare clean data
 
