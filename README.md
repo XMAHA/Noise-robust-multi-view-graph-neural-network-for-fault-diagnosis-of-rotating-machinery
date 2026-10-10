@@ -57,7 +57,7 @@ The framework comprises four components:
 
 Signals from different speeds but the same health state share a class. Each NPZ stores clean 1024-point TD windows and labels. During loading, every sensor window is z-score normalized; the FD view is computed from that same normalized window; and `torch_cluster.knn_graph` constructs the sample-specific graph.
 
-The processed XJTU and SEU HDF5 files are available from [Google Drive](https://drive.google.com/drive/folders/1F7-hpbQvHqVTNGCc2dalmP2dagDZ6-Lu?usp=drive_link). The SHA-256 of the XJTU file is `3eabd5762fb73c25e3272074453d074e222801f0d0ba2d4afb70b5d37feede2a`. The datasets remain subject to their respective terms of use. See [data/README.md](data/README.md) for mappings, validation commands, and required citations.
+The processed XJTU and SEU HDF5 files are available from [Google Drive](https://drive.google.com/drive/folders/1F7-hpbQvHqVTNGCc2dalmP2dagDZ6-Lu?usp=drive_link). The datasets remain subject to their respective terms of use. See [data/README.md](data/README.md) for mappings, validation commands, and required citations.
 
 ## Prepare clean data
 
