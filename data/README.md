@@ -1,7 +1,5 @@
 # Data preparation
 
-This release supports clean-signal experiments on the public XJTU Spurgear and SEU mechanical datasets. The preparation scripts do not inject synthetic noise.
-
 ## XJTU
 
 The processed file `XJ_Suprgear_15_20_multi_1024_TD_ordered.h5` contains ten conditions: five health states at two speeds. Each stored sample has 12 sensor channels, 1024 signal values, and a repeated label value in the final position. The preparation script discards that stored label column, maps conditions from their HDF5 keys, and selects windows 100–1099.
