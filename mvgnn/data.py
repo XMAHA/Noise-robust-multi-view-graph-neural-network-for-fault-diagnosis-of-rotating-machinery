@@ -47,11 +47,9 @@ class MultiViewDataset(InMemoryDataset):
         expected_num_classes: int | None = None,
     ) -> None:
         payload = np.load(path)
-        missing = {"signals", "labels", "preprocessing"}.difference(payload.files)
+        missing = {"signals", "labels"}.difference(payload.files)
         if missing:
             raise ValueError(f"Missing NPZ arrays: {sorted(missing)}")
-        if payload["preprocessing"].item() != "clean":
-            raise ValueError("This release accepts only clean prepared datasets")
         signals = payload["signals"].astype(np.float32)
         labels = payload["labels"].astype(np.int64)
         if signals.ndim != 3 or signals.shape[0] != labels.shape[0]:

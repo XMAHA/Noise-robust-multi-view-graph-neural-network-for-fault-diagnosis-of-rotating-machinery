@@ -9,7 +9,7 @@ The processed file `XJ_Suprgear_15_20_multi_1024_TD_ordered.h5` contains ten con
 ```bash
 python scripts/prepare_xjtu.py \
   --input /path/to/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
-  --output data/xjtu_clean.npz \
+  --output data/xjtu.npz \
   --start-window 100 \
   --max-windows-per-condition 1000
 ```
@@ -25,7 +25,7 @@ The SEU task merges four speeds for each state and excludes the four `bearing_he
 ```bash
 python scripts/prepare_seu.py \
   --input /path/to/117_small_20-50_multi_1024_TD_ordered.h5 \
-  --output data/seu_clean.npz \
+  --output data/seu.npz \
   --start-window 0 \
   --max-windows-per-condition 1000
 ```
@@ -36,13 +36,13 @@ Expected output: `signals=(36000, 8, 1024)`, with 4000 samples in each of nine c
 
 ```bash
 python scripts/validate_prepared_data.py \
-  --data data/xjtu_clean.npz \
+  --data data/xjtu.npz \
   --source /path/to/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
   --num-nodes 12 --num-classes 5 --conditions-per-class 2 \
   --start-window 100
 
 python scripts/validate_prepared_data.py \
-  --data data/seu_clean.npz \
+  --data data/seu.npz \
   --source /path/to/117_small_20-50_multi_1024_TD_ordered.h5 \
   --num-nodes 8 --num-classes 9 --conditions-per-class 4 \
   --start-window 0
@@ -54,11 +54,10 @@ Both commands must end with `validation=PASS` and report `source_max_abs_error=0
 
 Each file contains:
 
-- `signals`: `float32 [samples, sensors, 1024]` clean TD windows;
+- `signals`: `float32 [samples, sensors, 1024]` TD windows;
 - `labels`: `int64 [samples]`, contiguous from zero;
 - `source_key`: source HDF5 condition for every sample;
 - `class_names`, `dataset`, `window_length`, `start_window`, `max_windows_per_condition`;
-- `preprocessing`: the string `clean`.
 
 The loader independently z-score normalizes every sensor window. It computes the FD view as `abs(FFT(x)) / 1024`, removes DC, and retains bins 1–512. Graph connectivity is required but need not be stored: when `adjacency` is absent, `torch_cluster.knn_graph` constructs a sample-specific `k = 1` graph from normalized TD features and symmetrizes its edges.
 

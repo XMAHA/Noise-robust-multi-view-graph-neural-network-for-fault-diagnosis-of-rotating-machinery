@@ -9,7 +9,7 @@ data/*
 !data/example/.gitkeep
 runs/
 results/
-# Internal diagnostic scripts retained locally but excluded from the clean-data release.
+# Internal diagnostic scripts retained locally but excluded from the public release.
 scripts/compare_noise_ablation.py
 scripts/run_xjtu_original_h5_trials.py
 .idea/

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a clean prepared NPZ and optionally compare it with source HDF5."""
+"""Validate a prepared NPZ and optionally compare it with its source HDF5."""
 
 import argparse
 from pathlib import Path
@@ -14,7 +14,7 @@ def scalar(payload: np.lib.npyio.NpzFile, name: str):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data", required=True, help="Prepared clean NPZ file")
+    parser.add_argument("--data", required=True, help="Prepared NPZ file")
     parser.add_argument("--source", help="Source condition-keyed HDF5 file")
     parser.add_argument("--num-nodes", type=int, default=12)
     parser.add_argument("--num-classes", type=int, default=5)
@@ -25,13 +25,10 @@ def main() -> None:
     args = parser.parse_args()
 
     with np.load(args.data) as payload:
-        required = {"signals", "labels", "source_key", "preprocessing"}
+        required = {"signals", "labels", "source_key"}
         missing = required.difference(payload.files)
         if missing:
             raise ValueError(f"Missing NPZ arrays: {sorted(missing)}")
-        if scalar(payload, "preprocessing") != "clean":
-            raise ValueError("This release accepts only preprocessing='clean'")
-
         signals = payload["signals"]
         labels = payload["labels"].astype(np.int64)
         source_keys = payload["source_key"].astype(str)
@@ -64,27 +61,27 @@ def main() -> None:
         print(f"signals={signals.shape} dtype={signals.dtype}")
         print(f"class_counts={counts.tolist()}")
         print(f"conditions={len(unique_sources)} windows_each={source_counts.tolist()}")
-        print(f"start_window={stored_start} preprocessing=clean")
+        print(f"start_window={stored_start}")
 
         if args.source:
-            max_clean_error = 0.0
+            max_source_error = 0.0
             with h5py.File(args.source, "r") as handle:
                 for key in unique_sources:
                     if key not in handle:
                         raise ValueError(f"Source HDF5 is missing key: {key}")
                     mask = source_keys == key
                     stop = args.start_window + args.windows_per_condition
-                    clean = np.asarray(
+                    source = np.asarray(
                         handle[key][args.start_window:stop, :args.num_nodes, :args.time_length],
                         dtype=np.float32,
                     )
                     prepared = signals[mask].astype(np.float32, copy=False)
-                    if clean.shape != prepared.shape:
-                        raise ValueError(f"Shape mismatch for {key}: {clean.shape} vs {prepared.shape}")
-                    max_clean_error = max(max_clean_error, float(np.max(np.abs(prepared - clean))))
-            print(f"source_max_abs_error={max_clean_error:.3e}")
-            if max_clean_error != 0.0:
-                raise ValueError("Clean NPZ does not exactly match the selected source windows")
+                    if source.shape != prepared.shape:
+                        raise ValueError(f"Shape mismatch for {key}: {source.shape} vs {prepared.shape}")
+                    max_source_error = max(max_source_error, float(np.max(np.abs(prepared - source))))
+            print(f"source_max_abs_error={max_source_error:.3e}")
+            if max_source_error != 0.0:
+                raise ValueError("Prepared NPZ does not exactly match the selected source windows")
 
     print("validation=PASS")
 

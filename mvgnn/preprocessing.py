@@ -58,7 +58,7 @@ def convert_hdf5(
     start_window: int = 0,
     expected_conditions_per_class: int | None = None,
 ) -> None:
-    """Convert clean condition-keyed HDF5 data into the public NPZ schema."""
+    """Convert condition-keyed HDF5 data into the public NPZ schema."""
     if start_window < 0:
         raise ValueError("start_window must be non-negative")
     if max_windows_per_condition < 1:
@@ -112,7 +112,6 @@ def convert_hdf5(
         window_length=np.asarray(window_length, dtype=np.int64),
         start_window=np.asarray(start_window, dtype=np.int64),
         max_windows_per_condition=np.asarray(max_windows_per_condition, dtype=np.int64),
-        preprocessing=np.asarray("clean"),
     )
     np.savez_compressed(output, **payload)
     counts = np.bincount(labels, minlength=len(class_names))

@@ -12,7 +12,7 @@ MvGNN represents normalized multi-sensor signals as a multi-view graph with a sh
 
 ## Release scope
 
-This repository releases the MvGNN architecture and an end-to-end **clean-signal** pipeline for the XJTU Spurgear and SEU mechanical datasets. It supports HDF5-to-NPZ preparation, integrity validation, training, validation-based checkpoint selection, and testing.
+This repository releases the MvGNN architecture and an end-to-end pipeline for the XJTU Spurgear and SEU mechanical datasets. It supports HDF5-to-NPZ preparation, integrity validation, training, validation-based checkpoint selection, and testing.
 
 ## Overall framework
 
@@ -30,16 +30,16 @@ The framework comprises four components:
 ## Repository structure
 
 ```text
-├── configs/                       # XJTU and SEU clean-data configurations
+├── configs/                       # XJTU and SEU experiment configurations
 ├── data/README.md                 # Data preparation, schema, and citations
 ├── mvgnn/
 │   ├── data.py                    # Normalization, FFT, and kNN graphs
 │   ├── model.py                   # MvGNN architecture
-│   ├── preprocessing.py           # Clean HDF5 window selection and label mapping
+│   ├── preprocessing.py           # HDF5 window selection and label mapping
 │   └── utils.py                   # Configuration and random-seed utilities
 ├── scripts/
-│   ├── prepare_xjtu.py            # Clean XJTU HDF5-to-NPZ conversion
-│   ├── prepare_seu.py             # Clean SEU HDF5-to-NPZ conversion
+│   ├── prepare_xjtu.py            # XJTU HDF5-to-NPZ conversion
+│   ├── prepare_seu.py             # SEU HDF5-to-NPZ conversion
 │   ├── validate_prepared_data.py  # Shape, balance, and source-parity checks
 │   └── run_trials.py              # Repeated trials and result summary
 ├── train.py
@@ -54,22 +54,22 @@ The framework comprises four components:
 | XJTU Spurgear | 10 kHz | 900, 1200 | 12 | 5 | 1000 |
 | SEU mechanical | 5120 Hz | 1200, 1800, 2400, 3000 | 8 | 9 | 1000 |
 
-Signals from different speeds but the same health state share a class. Each NPZ stores clean 1024-point TD windows and labels. During loading, every sensor window is z-score normalized; the FD view is computed from that same normalized window; and `torch_cluster.knn_graph` constructs the sample-specific graph.
+Signals from different speeds but the same health state share a class. Each NPZ stores 1024-point TD windows and labels. During loading, every sensor window is z-score normalized; the FD view is computed from that same normalized window; and `torch_cluster.knn_graph` constructs the sample-specific graph.
 
 The processed XJTU and SEU HDF5 files are available from [Google Drive](https://drive.google.com/drive/folders/1F7-hpbQvHqVTNGCc2dalmP2dagDZ6-Lu?usp=drive_link). The datasets remain subject to their respective terms of use. See [data/README.md](data/README.md) for mappings, validation commands, and required citations.
 
-## Prepare clean data
+## Prepare data
 
 ```bash
 python scripts/prepare_xjtu.py \
   --input /path/to/XJ_Suprgear_15_20_multi_1024_TD_ordered.h5 \
-  --output data/xjtu_clean.npz \
+  --output data/xjtu.npz \
   --start-window 100 \
   --max-windows-per-condition 1000
 
 python scripts/prepare_seu.py \
   --input /path/to/117_small_20-50_multi_1024_TD_ordered.h5 \
-  --output data/seu_clean.npz \
+  --output data/seu.npz \
   --start-window 0 \
   --max-windows-per-condition 1000
 ```
@@ -81,23 +81,23 @@ XJTU retains windows `100:1100` from each of ten conditions. SEU retains `0:1000
 ```bash
 CUDA_VISIBLE_DEVICES=0 python train.py \
   --config configs/xj_paper.json \
-  --data data/xjtu_clean.npz \
-  --output checkpoints/xjtu_clean_seed0.pt \
+  --data data/xjtu.npz \
+  --output checkpoints/xjtu_seed0.pt \
   --device cuda --seed 0
 
 CUDA_VISIBLE_DEVICES=0 python train.py \
   --config configs/seu_paper.json \
-  --data data/seu_clean.npz \
-  --output checkpoints/seu_clean_seed0.pt \
+  --data data/seu.npz \
+  --output checkpoints/seu_seed0.pt \
   --device cuda --seed 0
 
 CUDA_VISIBLE_DEVICES=0 python evaluate.py \
-  --checkpoint checkpoints/xjtu_clean_seed0.pt \
-  --data data/xjtu_clean.npz --device cuda --split test
+  --checkpoint checkpoints/xjtu_seed0.pt \
+  --data data/xjtu.npz --device cuda --split test
 
 CUDA_VISIBLE_DEVICES=0 python evaluate.py \
-  --checkpoint checkpoints/seu_clean_seed0.pt \
-  --data data/seu_clean.npz --device cuda --split test
+  --checkpoint checkpoints/seu_seed0.pt \
+  --data data/seu.npz --device cuda --split test
 ```
 
 ## Model configuration
