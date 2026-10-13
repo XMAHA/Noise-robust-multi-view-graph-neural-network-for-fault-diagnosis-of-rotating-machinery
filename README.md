@@ -125,6 +125,8 @@ For reproducibility, experiments are repeated with fixed random seeds from `0` t
 
 ## Citation
 
+If you find this repo useful, please cite our paper:
+
 ```bibtex
 @article{LI2025112025,
   title   = {Noise-robust multi-view graph neural network for fault diagnosis of rotating machinery},
