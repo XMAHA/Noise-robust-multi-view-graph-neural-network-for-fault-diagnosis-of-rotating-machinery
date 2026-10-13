@@ -1,4 +1,4 @@
-# Noise-Robust Multi-View Graph Neural Network (MvGNN)
+# Noise-Robust Multi-View Graph Neural Network (MvGNN) for Fault Diagnosis of Rotating Machinery
 
 > **Noise-robust multi-view graph neural network for fault diagnosis of rotating machinery**  
 > Chenyang Li, Lingfei Mo, Chee Keong Kwoh, Xiaoli Li, Zhenghua Chen, Min Wu, and Ruqiang Yan  
